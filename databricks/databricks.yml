@@ -1,0 +1,85 @@
+# Databricks Asset Bundle: deploys the pipeline as Databricks Jobs.
+#   cd databricks
+#   databricks bundle validate
+#   databricks bundle deploy -t dev
+#   databricks bundle run mra_daily -t dev
+#
+# Prerequisites (one-off, in the workspace):
+#   * Unity Catalog storage credential using the Terraform access connector, and an
+#     external location for abfss://lake@<account>.dfs.core.windows.net/
+#   * catalog `market_risk` with schemas `silver`, `gold`, `staging`, `intermediate`, `reference`
+#   * secret scope `mra` holding `fred_api_key` and `sec_user_agent` (backed by Key Vault)
+bundle:
+  name: market-risk-analytics
+
+variables:
+  lake_root:
+    description: abfss URL of the lake (terraform output lake_root)
+  warehouse_id:
+    description: SQL Warehouse id used by the dbt task
+  catalog:
+    default: market_risk
+
+artifacts:
+  mra_wheel:
+    type: whl
+    path: ..
+    build: python -m build --wheel
+
+include: []
+
+resources:
+  jobs:
+    mra_daily:
+      name: mra_daily
+      schedule:
+        quartz_cron_expression: "0 30 22 ? * MON-FRI"
+        timezone_id: America/Toronto
+        pause_status: PAUSED          # Airflow triggers it; unpause only to run without Airflow
+      email_notifications:
+        on_failure: ["${workspace.current_user.userName}"]
+      job_clusters:
+        - job_cluster_key: small
+          new_cluster:
+            spark_version: 15.4.x-scala2.12
+            node_type_id: Standard_D4ds_v5
+            num_workers: 0                       # single-node: plenty for this data size
+            spark_conf:
+              spark.databricks.cluster.profile: singleNode
+              spark.master: "local[*]"
+            custom_tags: {ResourceClass: SingleNode}
+            data_security_mode: SINGLE_USER
+            spark_env_vars:
+              LAKE_ROOT: ${var.lake_root}
+              FRED_API_KEY: "{{secrets/mra/fred_api_key}}"
+              SEC_USER_AGENT: "{{secrets/mra/sec_user_agent}}"
+      tasks:
+        - task_key: silver
+          job_cluster_key: small
+          python_wheel_task: {package_name: market_risk_analytics, entry_point: mra-silver}
+          libraries: [{whl: ../dist/*.whl}]
+
+        - task_key: gold_dbt
+          depends_on: [{task_key: silver}]
+          job_cluster_key: small
+          dbt_task:
+            project_directory: ../dbt
+            # no profiles_directory: Databricks generates a profile for the SQL Warehouse
+            commands:
+              - "dbt seed"
+              - "dbt build"
+            warehouse_id: ${var.warehouse_id}
+            catalog: ${var.catalog}
+            schema: analytics
+          libraries: [{pypi: {package: "dbt-databricks>=1.9,<2"}}]
+
+        - task_key: risk_models
+          depends_on: [{task_key: gold_dbt}]
+          job_cluster_key: small
+          python_wheel_task: {package_name: market_risk_analytics, entry_point: mra-risk}
+          libraries: [{whl: ../dist/*.whl}]
+
+targets:
+  dev:
+    mode: development
+    default: true

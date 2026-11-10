@@ -1,0 +1,37 @@
+name: market_risk
+version: "1.0.0"
+config-version: 2
+profile: market_risk
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+analysis-paths: ["../sql/analysis"]
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+vars:
+  # Turn on once the Kafka stream has produced silver/crypto_bars_1m
+  enable_streaming: false
+  # Trading days per year, used to annualise volatility and returns
+  trading_days: 252
+  # Annual risk-free rate for the Sharpe ratio (roughly the BoC policy rate)
+  risk_free_rate: 0.0275
+
+models:
+  market_risk:
+    +persist_docs: {relation: true, columns: true}
+    staging:
+      +materialized: view
+      +schema: staging
+    intermediate:
+      +materialized: view
+      +schema: intermediate
+    marts:
+      +materialized: table
+      +schema: gold
+
+seeds:
+  market_risk:
+    +schema: reference

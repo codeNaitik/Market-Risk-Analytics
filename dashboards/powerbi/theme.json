@@ -1,0 +1,19 @@
+{
+  "name": "Market Risk Analytics",
+  "dataColors": ["#1F4E79", "#2E86AB", "#A23B72", "#F18F01", "#3B8B5A", "#C73E1D", "#6C757D", "#8E7DBE", "#E9C46A", "#264653"],
+  "good": "#3B8B5A",
+  "neutral": "#E9C46A",
+  "bad": "#C73E1D",
+  "maximum": "#1F4E79",
+  "center": "#F2F2F2",
+  "minimum": "#C73E1D",
+  "background": "#FFFFFF",
+  "foreground": "#1B1F24",
+  "tableAccent": "#1F4E79",
+  "textClasses": {
+    "title": {"fontFace": "Segoe UI Semibold", "fontSize": 14, "color": "#1B1F24"},
+    "header": {"fontFace": "Segoe UI Semibold", "fontSize": 12, "color": "#1B1F24"},
+    "label": {"fontFace": "Segoe UI", "fontSize": 10, "color": "#495057"},
+    "callout": {"fontFace": "Segoe UI Light", "fontSize": 28, "color": "#1F4E79"}
+  }
+}

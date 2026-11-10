@@ -1,0 +1,22 @@
+version: 2
+
+models:
+  - name: mart_macro_monthly
+    description: Sector monthly returns joined to month-end macro levels and monthly changes.
+    data_tests:
+      - unique_combination:
+          arguments: {columns: [sector, month_start_date]}
+
+  - name: mart_rate_sensitivity
+    description: Correlation and regression beta of each sector's monthly return to rate and FX moves.
+    data_tests:
+      - unique_combination:
+          arguments: {columns: [sector, factor]}
+    columns:
+      - name: correlation
+        data_tests:
+          - between:
+              arguments: {min_value: -1.000001, max_value: 1.000001}
+
+  - name: mart_crypto_live
+    description: Last 24h of streamed 1-minute crypto bars with 15-minute rolling stats.

@@ -1,0 +1,25 @@
+ticker,sector,exchange,country,currency,is_benchmark
+AAPL,Information Technology,NASDAQ,US,USD,False
+MSFT,Information Technology,NASDAQ,US,USD,False
+NVDA,Information Technology,NASDAQ,US,USD,False
+AMZN,Consumer Discretionary,NASDAQ,US,USD,False
+GOOGL,Communication Services,NASDAQ,US,USD,False
+META,Communication Services,NASDAQ,US,USD,False
+JPM,Financials,NYSE,US,USD,False
+BAC,Financials,NYSE,US,USD,False
+GS,Financials,NYSE,US,USD,False
+XOM,Energy,NYSE,US,USD,False
+CVX,Energy,NYSE,US,USD,False
+JNJ,Health Care,NYSE,US,USD,False
+UNH,Health Care,NYSE,US,USD,False
+PG,Consumer Staples,NYSE,US,USD,False
+KO,Consumer Staples,NYSE,US,USD,False
+CAT,Industrials,NYSE,US,USD,False
+NEE,Utilities,NYSE,US,USD,False
+AMT,Real Estate,NYSE,US,USD,False
+LIN,Materials,NYSE,US,USD,False
+RY.TO,Financials,TSX,CA,CAD,False
+TD.TO,Financials,TSX,CA,CAD,False
+SHOP.TO,Information Technology,TSX,CA,CAD,False
+ENB.TO,Energy,TSX,CA,CAD,False
+^GSPC,Index,INDEX,US,USD,True

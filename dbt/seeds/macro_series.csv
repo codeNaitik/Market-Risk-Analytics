@@ -1,0 +1,10 @@
+series_id,source,series_name,unit,frequency
+FEDFUNDS,fred,Effective Federal Funds Rate,percent,monthly
+DGS10,fred,US 10-Year Treasury Yield,percent,daily
+DGS2,fred,US 2-Year Treasury Yield,percent,daily
+CPIAUCSL,fred,US CPI (All Urban Consumers),index,monthly
+UNRATE,fred,US Unemployment Rate,percent,monthly
+VIXCLS,fred,CBOE Volatility Index (VIX),index,daily
+V39079,boc_valet,BoC Target Overnight Rate,percent,daily
+FXUSDCAD,boc_valet,USD/CAD Exchange Rate,rate,daily
+BD.CDN.10YR.DQ.YLD,boc_valet,GoC 10-Year Bond Yield,percent,daily

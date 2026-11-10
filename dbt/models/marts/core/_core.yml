@@ -1,0 +1,50 @@
+version: 2
+
+models:
+  - name: dim_date
+    description: Calendar dimension. Join on date_key from any fact.
+    columns:
+      - name: date_key
+        data_tests: [unique, not_null]
+
+  - name: dim_company
+    description: One row per ticker with sector, listing, portfolio weight and data coverage.
+    columns:
+      - name: ticker
+        data_tests: [unique, not_null]
+
+  - name: fct_daily_prices
+    description: Daily OHLCV with adjusted returns. Grain = ticker x trading day.
+    columns:
+      - name: price_id
+        data_tests: [unique, not_null]
+      - name: date_key
+        data_tests:
+          - relationships:
+              arguments: {to: ref('dim_date'), field: date_key}
+      - name: ticker
+        data_tests:
+          - relationships:
+              arguments: {to: ref('dim_company'), field: ticker}
+      - name: daily_return
+        description: Simple return on adj_close. Bounded to catch bad prices or missed splits.
+        data_tests:
+          - between:
+              arguments: {min_value: -0.6, max_value: 1.5}
+
+  - name: fct_financials_quarterly
+    description: Quarterly fundamentals per ticker incl. derived Q4 and trailing-twelve-month figures.
+    data_tests:
+      - unique_combination:
+          arguments: {columns: [ticker, period_end]}
+    columns:
+      - name: ticker
+        data_tests:
+          - relationships:
+              arguments: {to: ref('dim_company'), field: ticker}
+
+  - name: fct_macro_daily
+    description: Daily macro panel (US + Canada), forward-filled from each release.
+    columns:
+      - name: date_key
+        data_tests: [unique, not_null]

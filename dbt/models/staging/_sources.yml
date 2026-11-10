@@ -1,0 +1,35 @@
+version: 2
+
+# Silver tables produced by the Spark jobs.
+#  - dev (DuckDB): `meta.external_location` reads the Parquet files in the lake folder.
+#  - databricks:  the same names resolve to Delta tables in the `silver` schema
+#                 (dbt-databricks ignores meta.external_location).
+sources:
+  - name: silver
+    schema: silver
+    meta:
+      external_location: "read_parquet('{{ env_var('LAKE_ROOT', '../lake') }}/silver/{name}/**/*.parquet', hive_partitioning = true, union_by_name = true)"
+    freshness:
+      warn_after: {count: 3, period: day}
+      error_after: {count: 7, period: day}
+    loaded_at_field: _processed_at
+    tables:
+      - name: daily_prices
+        description: Validated, de-duplicated daily OHLCV per ticker (one row per ticker per trading day).
+        columns:
+          - name: ticker
+            data_tests: [not_null]
+          - name: trade_date
+            data_tests: [not_null]
+      - name: financials
+        description: SEC EDGAR facts mapped to business metrics; latest filing per period, restatements flagged.
+      - name: macro_observations
+        description: FRED and Bank of Canada series in one long table.
+      - name: crypto_bars_1m
+        description: One-minute OHLCV bars built by the Spark streaming job.
+        config:
+          enabled: "{{ var('enable_streaming') }}"
+        loaded_at_field: bar_end
+        freshness:
+          warn_after: {count: 15, period: minute}
+          error_after: {count: 2, period: hour}

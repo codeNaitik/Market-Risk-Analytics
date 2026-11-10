@@ -1,0 +1,35 @@
+[project]
+name = "market-risk-analytics"
+version = "0.1.0"
+description = "Market & macro risk lakehouse: SEC EDGAR, FRED, Bank of Canada, equities and live crypto on Azure + Databricks + dbt + Power BI"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+
+[project.scripts]
+mra-silver = "mra.processing.run_silver:main"
+mra-risk = "mra.analytics.run_risk:run"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+markers = ["spark: tests that start a local Spark session (slower)"]
+
+[tool.ruff]
+line-length = 130
+target-version = "py311"
+src = ["src"]
+extend-exclude = ["lake", "dbt/target"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "BLE"]
+ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["mra"]

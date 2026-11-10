@@ -1,0 +1,68 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    name: lint, unit tests, end-to-end demo
+    runs-on: ubuntu-latest
+    env:
+      LAKE_ROOT: ${{ github.workspace }}/lake
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - uses: actions/setup-java@v4          # PySpark needs a JVM
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install
+        run: pip install -r requirements-dev.txt
+
+      - name: Lint
+        run: ruff check src tests airflow
+
+      - name: Unit + Spark tests
+        run: pytest -q
+
+      - name: End-to-end pipeline on synthetic data (bronze -> silver -> gold -> risk)
+        run: make demo
+
+      - name: Compile SQL analyses
+        run: cd dbt && dbt compile --profiles-dir .
+
+      - name: Build dbt docs (lineage site)
+        run: cd dbt && dbt docs generate --profiles-dir .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dbt-docs
+          path: |
+            dbt/target/index.html
+            dbt/target/manifest.json
+            dbt/target/catalog.json
+
+  terraform:
+    name: terraform fmt + validate
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra/terraform
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - run: terraform fmt -check -recursive
+      - run: terraform init -backend=false
+      - run: terraform validate

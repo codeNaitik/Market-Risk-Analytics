@@ -1,0 +1,95 @@
+# ---------------------------------------------------------------------------
+# Market & Macro Risk Analytics Platform: pipeline configuration
+# Everything the pipeline ingests is driven from this file, so scaling up
+# (more tickers, more years, more macro series) is a config change, not code.
+# ---------------------------------------------------------------------------
+
+history:
+  start_date: "2015-01-01"        # how far back prices / macro series go
+
+# Equity universe. `sector` feeds dim_company; `exchange` lets you mix TSX + US.
+# TSX tickers use the Yahoo suffix ".TO". CIK lookup is skipped for non-SEC filers.
+universe:
+  benchmark: "^GSPC"              # S&P 500 index, used for beta
+  tickers:
+    - {ticker: AAPL,  sector: Information Technology, exchange: NASDAQ}
+    - {ticker: MSFT,  sector: Information Technology, exchange: NASDAQ}
+    - {ticker: NVDA,  sector: Information Technology, exchange: NASDAQ}
+    - {ticker: AMZN,  sector: Consumer Discretionary, exchange: NASDAQ}
+    - {ticker: GOOGL, sector: Communication Services, exchange: NASDAQ}
+    - {ticker: META,  sector: Communication Services, exchange: NASDAQ}
+    - {ticker: JPM,   sector: Financials,             exchange: NYSE}
+    - {ticker: BAC,   sector: Financials,             exchange: NYSE}
+    - {ticker: GS,    sector: Financials,             exchange: NYSE}
+    - {ticker: XOM,   sector: Energy,                 exchange: NYSE}
+    - {ticker: CVX,   sector: Energy,                 exchange: NYSE}
+    - {ticker: JNJ,   sector: Health Care,            exchange: NYSE}
+    - {ticker: UNH,   sector: Health Care,            exchange: NYSE}
+    - {ticker: PG,    sector: Consumer Staples,       exchange: NYSE}
+    - {ticker: KO,    sector: Consumer Staples,       exchange: NYSE}
+    - {ticker: CAT,   sector: Industrials,            exchange: NYSE}
+    - {ticker: NEE,   sector: Utilities,              exchange: NYSE}
+    - {ticker: AMT,   sector: Real Estate,            exchange: NYSE}
+    - {ticker: LIN,   sector: Materials,              exchange: NYSE}
+    - {ticker: RY.TO, sector: Financials,             exchange: TSX}
+    - {ticker: TD.TO, sector: Financials,             exchange: TSX}
+    - {ticker: SHOP.TO, sector: Information Technology, exchange: TSX}
+    - {ticker: ENB.TO, sector: Energy,                exchange: TSX}
+
+# Sample portfolio used by the risk marts and the Monte Carlo VaR job.
+# Weights must sum to 1.0 (validated at load time).
+portfolio:
+  name: "Balanced Growth"
+  notional_cad: 1000000
+  risk_free_rate: 0.0275          # annual, for Sharpe ratios (keep in sync with dbt var)
+  weights:
+    AAPL: 0.10
+    MSFT: 0.10
+    NVDA: 0.08
+    AMZN: 0.07
+    JPM: 0.08
+    XOM: 0.06
+    JNJ: 0.07
+    PG: 0.06
+    RY.TO: 0.10
+    TD.TO: 0.08
+    ENB.TO: 0.10
+    NEE: 0.10
+
+# SEC EDGAR XBRL concepts to extract from companyfacts. Companies report revenue
+# under different tags, so we keep a priority list and coalesce in silver.
+sec_edgar:
+  concepts:
+    revenue: [Revenues, RevenueFromContractWithCustomerExcludingAssessedTax, SalesRevenueNet]
+    net_income: [NetIncomeLoss]
+    total_assets: [Assets]
+    total_liabilities: [Liabilities]
+    stockholders_equity: [StockholdersEquity]
+    long_term_debt: [LongTermDebt, LongTermDebtNoncurrent]
+    operating_cash_flow: [NetCashProvidedByUsedInOperatingActivities]
+    eps_diluted: [EarningsPerShareDiluted]
+
+# FRED series (US). Free API key: https://fred.stlouisfed.org/docs/api/api_key.html
+fred:
+  series:
+    FEDFUNDS: {name: "Effective Federal Funds Rate", unit: percent, frequency: monthly}
+    DGS10:    {name: "US 10-Year Treasury Yield",    unit: percent, frequency: daily}
+    DGS2:     {name: "US 2-Year Treasury Yield",     unit: percent, frequency: daily}
+    CPIAUCSL: {name: "US CPI (All Urban Consumers)", unit: index,   frequency: monthly}
+    UNRATE:   {name: "US Unemployment Rate",         unit: percent, frequency: monthly}
+    VIXCLS:   {name: "CBOE Volatility Index (VIX)",  unit: index,   frequency: daily}
+
+# Bank of Canada Valet API (no key needed): https://www.bankofcanada.ca/valet/docs
+boc_valet:
+  series:
+    V39079:              {name: "BoC Target Overnight Rate", unit: percent, frequency: daily}
+    FXUSDCAD:            {name: "USD/CAD Exchange Rate",     unit: rate,    frequency: daily}
+    BD.CDN.10YR.DQ.YLD:  {name: "GoC 10-Year Bond Yield",    unit: percent, frequency: daily}
+
+# Live crypto stream (Coinbase Exchange public WebSocket, no auth required).
+streaming:
+  websocket_url: "wss://ws-feed.exchange.coinbase.com"
+  product_ids: [BTC-USD, ETH-USD, SOL-USD]
+  kafka_topic: "crypto.trades.raw"
+  bar_interval: "1 minute"
+  watermark: "2 minutes"

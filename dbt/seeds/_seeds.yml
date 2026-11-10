@@ -1,0 +1,33 @@
+version: 2
+
+seeds:
+  - name: company_universe
+    description: Tickers in scope (generated from config/settings.yaml by `make seeds`).
+    config:
+      column_types: {is_benchmark: boolean}
+    columns:
+      - name: ticker
+        data_tests: [unique, not_null]
+      - name: currency
+        data_tests:
+          - accepted_values:
+              arguments: {values: [USD, CAD]}
+
+  - name: portfolio_weights
+    description: Target weights of the sample portfolio.
+    columns:
+      - name: ticker
+        data_tests:
+          - not_null
+          - relationships:
+              arguments: {to: ref('company_universe'), field: ticker}
+      - name: weight
+        data_tests:
+          - between:
+              arguments: {min_value: 0, max_value: 1}
+
+  - name: macro_series
+    description: Catalogue of macro series (FRED + Bank of Canada).
+    columns:
+      - name: series_id
+        data_tests: [unique, not_null]

@@ -1,0 +1,42 @@
+version: 2
+
+models:
+  - name: stg_daily_prices
+    data_tests:
+      - unique_combination:
+          arguments: {columns: [ticker, trade_date]}
+    columns:
+      - name: adj_close_price
+        data_tests: [not_null, positive]
+      - name: trade_date
+        data_tests: [not_null, not_in_future]
+      - name: ticker
+        data_tests:
+          - relationships:
+              arguments: {to: ref('company_universe'), field: ticker}
+
+  - name: stg_financials
+    data_tests:
+      - unique_combination:
+          arguments: {columns: [ticker, metric, period_type, period_end]}
+    columns:
+      - name: period_type
+        data_tests:
+          - accepted_values:
+              arguments: {values: [quarter, annual, instant]}
+      - name: metric
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [revenue, net_income, total_assets, total_liabilities, stockholders_equity,
+                         long_term_debt, operating_cash_flow, eps_diluted]
+
+  - name: stg_macro_observations
+    data_tests:
+      - unique_combination:
+          arguments: {columns: [series_id, obs_date]}
+    columns:
+      - name: series_id
+        data_tests:
+          - relationships:
+              arguments: {to: ref('macro_series'), field: series_id}

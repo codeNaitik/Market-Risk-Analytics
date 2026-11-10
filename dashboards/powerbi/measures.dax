@@ -1,0 +1,155 @@
+// =============================================================================
+// Market & Macro Risk Analytics: Power BI DAX measures
+// Paste each measure into a "_Measures" table (Home > Enter data > empty table).
+// Prerequisites: relationships from dashboards/powerbi/README.md, and dim_date marked
+// as the date table on dim_date[calendar_date].
+// =============================================================================
+
+
+// ---------------------------------------------------------------- Portfolio KPIs
+
+Portfolio Value (CAD) =
+VAR LastDate = MAX ( mart_portfolio_daily[trade_date] )
+RETURN
+    CALCULATE (
+        SUM ( mart_portfolio_daily[portfolio_value_cad] ),
+        mart_portfolio_daily[trade_date] = LastDate
+    )
+
+// Compounded return over whatever dates are in the filter context (slicer-aware)
+Portfolio Return =
+PRODUCTX ( mart_portfolio_daily, 1 + mart_portfolio_daily[portfolio_return] ) - 1
+
+Benchmark Return =
+PRODUCTX ( mart_portfolio_daily, 1 + COALESCE ( mart_portfolio_daily[benchmark_return], 0 ) ) - 1
+
+Excess Return vs Benchmark =
+[Portfolio Return] - [Benchmark Return]
+
+Trading Days = COUNTROWS ( mart_portfolio_daily )
+
+Annualized Return =
+VAR n = [Trading Days]
+RETURN IF ( n > 20, POWER ( 1 + [Portfolio Return], DIVIDE ( 252, n ) ) - 1 )
+
+Annualized Volatility =
+STDEV.S ( mart_portfolio_daily[portfolio_return] ) * SQRT ( 252 )
+
+Sharpe Ratio =
+VAR RiskFree = 0.0275          // keep in sync with dbt var risk_free_rate
+RETURN DIVIDE ( [Annualized Return] - RiskFree, [Annualized Volatility] )
+
+// Largest peak-to-trough fall inside the selected period
+Max Drawdown =
+VAR Daily =
+    ADDCOLUMNS (
+        VALUES ( mart_portfolio_daily[trade_date] ),
+        "@value", CALCULATE ( SUM ( mart_portfolio_daily[portfolio_value_cad] ) )
+    )
+VAR WithPeak =
+    ADDCOLUMNS (
+        Daily,
+        "@peak",
+            VAR d = mart_portfolio_daily[trade_date]
+            RETURN MAXX ( FILTER ( Daily, mart_portfolio_daily[trade_date] <= d ), [@value] )
+    )
+RETURN MINX ( WithPeak, DIVIDE ( [@value], [@peak] ) - 1 )
+
+Daily P&L (CAD) = SUM ( mart_portfolio_daily[daily_pnl_cad] )
+
+Latest Daily Return =
+VAR LastDate = MAX ( mart_portfolio_daily[trade_date] )
+RETURN CALCULATE ( SUM ( mart_portfolio_daily[portfolio_return] ), mart_portfolio_daily[trade_date] = LastDate )
+
+
+// ---------------------------------------------------------------- Value at Risk
+
+// Historical 1-day VaR over the selected period, as a positive CAD loss
+VaR 95% (CAD) =
+- PERCENTILEX.INC ( mart_portfolio_daily, mart_portfolio_daily[portfolio_return], 0.05 ) * [Portfolio Value (CAD)]
+
+VaR 99% (CAD) =
+- PERCENTILEX.INC ( mart_portfolio_daily, mart_portfolio_daily[portfolio_return], 0.01 ) * [Portfolio Value (CAD)]
+
+// Expected shortfall: average loss on days worse than VaR 95
+CVaR 95% (CAD) =
+VAR Threshold = PERCENTILEX.INC ( mart_portfolio_daily, mart_portfolio_daily[portfolio_return], 0.05 )
+RETURN
+    - AVERAGEX (
+        FILTER ( mart_portfolio_daily, mart_portfolio_daily[portfolio_return] <= Threshold ),
+        mart_portfolio_daily[portfolio_return]
+    ) * [Portfolio Value (CAD)]
+
+VaR Breaches = CALCULATE ( COUNTROWS ( risk_var_backtest ), risk_var_backtest[is_breach] = TRUE () )
+
+Expected Breaches (99%) = COUNTROWS ( risk_var_backtest ) * 0.01
+
+Backtest Verdict =
+VAR p = MAX ( risk_var_backtest_summary[p_value] )
+RETURN IF ( p >= 0.05, "Model OK (Kupiec p = " & FORMAT ( p, "0.00" ) & ")", "Model REJECTED (Kupiec p = " & FORMAT ( p, "0.000" ) & ")" )
+
+
+// ---------------------------------------------------------------- Security level
+
+Stock Return =
+PRODUCTX ( fct_daily_prices, 1 + COALESCE ( fct_daily_prices[daily_return], 0 ) ) - 1
+
+Stock Volatility (Ann.) =
+STDEV.S ( fct_daily_prices[daily_return] ) * SQRT ( 252 )
+
+Latest Close =
+VAR LastDate = MAX ( fct_daily_prices[trade_date] )
+RETURN CALCULATE ( MAX ( fct_daily_prices[close_price] ), fct_daily_prices[trade_date] = LastDate )
+
+Latest Beta (1Y) =
+VAR LastDate = MAX ( mart_returns_risk[trade_date] )
+RETURN CALCULATE ( AVERAGE ( mart_returns_risk[beta_1y] ), mart_returns_risk[trade_date] = LastDate )
+
+Top Performer =
+VAR Ranked =
+    ADDCOLUMNS ( VALUES ( dim_company[ticker] ), "@ret", [Stock Return] )
+RETURN MAXX ( TOPN ( 1, Ranked, [@ret], DESC ), dim_company[ticker] )
+
+Bottom Performer =
+VAR Ranked =
+    ADDCOLUMNS ( VALUES ( dim_company[ticker] ), "@ret", [Stock Return] )
+RETURN MAXX ( TOPN ( 1, Ranked, [@ret], ASC ), dim_company[ticker] )
+
+// 30-day moving average of price (uses the marked date table)
+Close 30D MA =
+AVERAGEX (
+    DATESINPERIOD ( dim_date[calendar_date], MAX ( dim_date[calendar_date] ), -30, DAY ),
+    CALCULATE ( AVERAGE ( fct_daily_prices[close_price] ) )
+)
+
+
+// ---------------------------------------------------------------- Sector & macro
+
+Sector Return (Selected) =
+PRODUCTX ( mart_sector_performance, 1 + mart_sector_performance[avg_monthly_return] ) - 1
+
+Sector Return MoM Change =
+VAR Cur = MAX ( mart_sector_performance[month_start_date] )
+VAR ThisMonth = CALCULATE ( SUM ( mart_sector_performance[avg_monthly_return] ), mart_sector_performance[month_start_date] = Cur )
+VAR PrevMonth = CALCULATE ( SUM ( mart_sector_performance[avg_monthly_return] ), mart_sector_performance[month_start_date] = EDATE ( Cur, -1 ) )
+RETURN ThisMonth - PrevMonth
+
+BoC Policy Rate (Latest) =
+VAR LastDate = MAX ( fct_macro_daily[calendar_date] )
+RETURN CALCULATE ( MAX ( fct_macro_daily[boc_policy_rate] ), fct_macro_daily[calendar_date] = LastDate )
+
+Yield Curve Status =
+VAR LastDate = MAX ( fct_macro_daily[calendar_date] )
+VAR Spread = CALCULATE ( MAX ( fct_macro_daily[us_2s10s_spread] ), fct_macro_daily[calendar_date] = LastDate )
+RETURN IF ( Spread < 0, "Inverted (" & FORMAT ( Spread, "0.00" ) & " pts)", "Normal (+" & FORMAT ( Spread, "0.00" ) & " pts)" )
+
+
+// ---------------------------------------------------------------- Titles / UX
+
+Report Title =
+"Portfolio risk  |  " & FORMAT ( MIN ( mart_portfolio_daily[trade_date] ), "mmm d, yyyy" )
+    & " to " & FORMAT ( MAX ( mart_portfolio_daily[trade_date] ), "mmm d, yyyy" )
+
+Data Freshness =
+"Prices as of " & FORMAT ( MAX ( fct_daily_prices[trade_date] ), "mmm d, yyyy" )
+    & IF ( MAX ( fct_daily_prices[data_source] ) = "synthetic", "  (SYNTHETIC DEMO DATA)", "" )

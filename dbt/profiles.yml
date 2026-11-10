@@ -1,0 +1,21 @@
+# dbt looks here because the Makefile/CI pass --profiles-dir dbt.
+# No secrets in this file: everything sensitive comes from environment variables.
+market_risk:
+  target: "{{ env_var('DBT_TARGET', 'dev') }}"
+  outputs:
+
+    # Local: DuckDB reads the silver Parquet files straight from the lake folder.
+    dev:
+      type: duckdb
+      path: "{{ env_var('LAKE_ROOT', '../lake') }}/warehouse.duckdb"
+      threads: 4
+
+    # Cloud: Azure Databricks SQL Warehouse (Unity Catalog).
+    databricks:
+      type: databricks
+      host: "{{ env_var('DATABRICKS_HOST') }}"
+      http_path: "{{ env_var('DATABRICKS_HTTP_PATH') }}"
+      token: "{{ env_var('DATABRICKS_TOKEN') }}"
+      catalog: "{{ env_var('DATABRICKS_CATALOG', 'market_risk') }}"
+      schema: analytics
+      threads: 8

@@ -1,0 +1,44 @@
+version: 2
+
+models:
+  - name: mart_returns_risk
+    description: Rolling volatility, beta, Sharpe ratio, cumulative return and drawdown per security.
+    data_tests:
+      - unique_combination:
+          arguments: {columns: [ticker, trade_date]}
+    columns:
+      - name: drawdown
+        data_tests:
+          - between:
+              arguments: {min_value: -1, max_value: 0.000001}
+
+  - name: mart_portfolio_daily
+    description: Daily value, P&L, drawdown and active return of the sample portfolio vs the benchmark.
+    columns:
+      - name: trade_date
+        data_tests: [unique, not_null]
+      - name: portfolio_value_cad
+        data_tests: [positive]
+
+  - name: mart_portfolio_risk_summary
+    description: Headline risk KPIs (VaR, CVaR, Sharpe, max drawdown, beta) for full period, 1Y and 3M windows.
+    data_tests:
+      - row_count_at_least:
+          arguments: {min_rows: 3}
+    columns:
+      - name: window_name
+        data_tests: [unique]
+      - name: var99_cad
+        description: 99% 1-day historical VaR in CAD. Must be >= VaR 95.
+        data_tests: [positive]
+
+  - name: mart_sector_performance
+    data_tests:
+      - unique_combination:
+          arguments: {columns: [sector, month_start_date]}
+
+  - name: mart_fundamentals
+    description: Fundamentals screener - TTM revenue, margin, growth, leverage and P/E per company.
+    columns:
+      - name: ticker
+        data_tests: [unique, not_null]
