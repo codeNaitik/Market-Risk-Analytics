@@ -1,11 +1,11 @@
 -- Screener table: latest trailing-twelve-month fundamentals + valuation per company.
+-- Always uses each company's MOST RECENT quarter and flags stale/incomplete data.
 with fin as (
     select
         *,
         lag(revenue_ttm, 4) over (partition by ticker order by period_end)   as revenue_ttm_prior_year,
         row_number() over (partition by ticker order by period_end desc)     as recency
     from {{ ref('fct_financials_quarterly') }}
-    where revenue_ttm is not null
 ),
 
 latest_fin as (
@@ -37,7 +37,14 @@ select
     p.close_price                                              as latest_close,
     p.trade_date                                               as price_date,
     case when f.eps_ttm > 0 then p.close_price / f.eps_ttm end as pe_ratio_ttm,
-    f.has_restatement
+    f.has_restatement,
+    p.trade_date - f.period_end > 200                          as is_stale,
+    case
+        when p.trade_date - f.period_end > 200 then 'stale: no filing in 200+ days'
+        when f.revenue_ttm is null             then 'revenue not reported under mapped XBRL tags'
+        when f.net_income_ttm is null          then 'net income missing for a recent quarter'
+        else 'ok'
+    end                                                        as data_quality_note
 from latest_fin f
 join {{ ref('dim_company') }} c on c.ticker = f.ticker
 left join latest_price p on p.ticker = f.ticker

@@ -60,7 +60,7 @@ portfolio:
 # under different tags, so we keep a priority list and coalesce in silver.
 sec_edgar:
   concepts:
-    revenue: [Revenues, RevenueFromContractWithCustomerExcludingAssessedTax, SalesRevenueNet]
+    revenue: [Revenues, RevenueFromContractWithCustomerExcludingAssessedTax, RevenuesNetOfInterestExpense, SalesRevenueNet]
     net_income: [NetIncomeLoss]
     total_assets: [Assets]
     total_liabilities: [Liabilities]
