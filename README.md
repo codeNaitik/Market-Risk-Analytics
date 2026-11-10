@@ -11,7 +11,7 @@ to a **Power BI** dashboard.
 
 ![CI](https://github.com/codeNaitik/Market-Risk-Analytics/actions/workflows/ci.yml/badge.svg)
 
-<!-- Add after you build the dashboard: ![Executive overview](dashboards/powerbi/screenshots/overview.png) -->
+![Executive overview](dashboards/powerbi/screenshots/overview.png)
 
 ---
 
