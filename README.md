@@ -9,7 +9,7 @@ to a **Power BI** dashboard.
 > It runs fully on a laptop in about 5 minutes with synthetic data (`make demo`, no API keys), and
 > on Azure with real data using the same code.
 
-![CI](https://github.com/codeNaitik/market-risk-analytics/actions/workflows/ci.yml/badge.svg)
+![CI](https://github.com/codeNaitik/Market-Risk-Analytics/actions/workflows/ci.yml/badge.svg)
 
 <!-- Add after you build the dashboard: ![Executive overview](dashboards/powerbi/screenshots/overview.png) -->
 
