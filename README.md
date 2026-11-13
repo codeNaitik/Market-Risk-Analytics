@@ -13,6 +13,8 @@ to a **Power BI** dashboard.
 
 ![Executive overview](dashboards/powerbi/screenshots/overview.png)
 
+![Risk and VaR](dashboards/powerbi/screenshots/risk_var.png)
+
 ---
 
 ## What it answers
