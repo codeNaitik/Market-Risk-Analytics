@@ -15,6 +15,8 @@ to a **Power BI** dashboard.
 
 ![Risk and VaR](dashboards/powerbi/screenshots/risk_var.png)
 
+![Macro impact](dashboards/powerbi/screenshots/macro_impact.png)
+
 ---
 
 ## What it answers
